@@ -40,6 +40,48 @@ pub fn extraer_texto(ruta: String) -> Result<String, String> {
 }
 
 #[tauri::command]
+pub fn registrar_test_iniciado(
+    app: AppHandle,
+    titulo: String,
+    total: u32,
+    datos_test: String,
+) -> Result<i64, String> {
+    let data_dir = app.path().app_data_dir()
+        .map_err(|e| e.to_string())?
+        .to_string_lossy()
+        .to_string();
+
+    std::fs::create_dir_all(&data_dir).map_err(|e| e.to_string())?;
+    let conn = storage::conectar(&data_dir).map_err(|e| e.to_string())?;
+    let fecha = chrono::Local::now().format("%Y-%m-%d %H:%M").to_string();
+
+    let resultado = storage::ResultadoTest {
+        id: None, titulo, fecha, total,
+        correctas: 0, incorrectas: 0, porcentaje: 0.0,
+        estado: "iniciado".to_string(),
+        datos_test: Some(datos_test),
+    };
+
+    storage::guardar_resultado(&conn, &resultado).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub fn cargar_test_desde_historial(app: AppHandle, id: i64) -> Result<Value, String> {
+    let data_dir = app.path().app_data_dir()
+        .map_err(|e| e.to_string())?
+        .to_string_lossy()
+        .to_string();
+
+    std::fs::create_dir_all(&data_dir).map_err(|e| e.to_string())?;
+    let conn = storage::conectar(&data_dir).map_err(|e| e.to_string())?;
+    let json = storage::cargar_datos_test(&conn, id)
+        .map_err(|e| e.to_string())?
+        .ok_or_else(|| "Test sin datos guardados".to_string())?;
+
+    serde_json::from_str(&json).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
 pub fn guardar_resultado(
     app: AppHandle,
     titulo: String,
@@ -52,6 +94,7 @@ pub fn guardar_resultado(
         .to_string_lossy()
         .to_string();
 
+    std::fs::create_dir_all(&data_dir).map_err(|e| e.to_string())?;
     let conn = storage::conectar(&data_dir).map_err(|e| e.to_string())?;
 
     let porcentaje = if total > 0 { (correctas as f64 / total as f64) * 100.0 } else { 0.0 };
@@ -59,9 +102,22 @@ pub fn guardar_resultado(
 
     let resultado = storage::ResultadoTest {
         id: None, titulo, fecha, total, correctas, incorrectas, porcentaje,
+        estado: "completado".to_string(),
     };
 
     storage::guardar_resultado(&conn, &resultado).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub fn limpiar_historial(app: AppHandle) -> Result<(), String> {
+    let data_dir = app.path().app_data_dir()
+        .map_err(|e| e.to_string())?
+        .to_string_lossy()
+        .to_string();
+
+    std::fs::create_dir_all(&data_dir).map_err(|e| e.to_string())?;
+    let conn = storage::conectar(&data_dir).map_err(|e| e.to_string())?;
+    storage::limpiar_historial(&conn).map_err(|e| e.to_string())
 }
 
 #[tauri::command]
@@ -71,6 +127,7 @@ pub fn cargar_historial(app: AppHandle) -> Result<Value, String> {
         .to_string_lossy()
         .to_string();
 
+    std::fs::create_dir_all(&data_dir).map_err(|e| e.to_string())?;
     let conn = storage::conectar(&data_dir).map_err(|e| e.to_string())?;
     let historial = storage::cargar_historial(&conn).map_err(|e| e.to_string())?;
     serde_json::to_value(historial).map_err(|e| e.to_string())

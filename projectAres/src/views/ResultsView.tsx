@@ -1,5 +1,3 @@
-import { useEffect } from 'react';
-import { invoke } from '@tauri-apps/api/core';
 import { ResultadoParser } from '../types';
 
 interface Props {
@@ -17,15 +15,6 @@ export default function ResultsView({ data, respuestas, onRepetir, onNuevo }: Pr
   ).length;
   const incorrectas = respondidas - correctas;
   const pct = total > 0 ? Math.round((correctas / total) * 100) : 0;
-
-  useEffect(() => {
-    invoke('guardar_resultado', {
-      titulo: data.titulo,
-      total,
-      correctas,
-      incorrectas,
-    }).catch(console.error);
-  }, []);
 
   return (
     <div className="results-view">

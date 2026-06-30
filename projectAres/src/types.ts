@@ -25,6 +25,7 @@ export interface ResultadoTest {
   correctas: number;
   incorrectas: number;
   porcentaje: number;
+  estado: string;
 }
 
 export type Vista = 'upload' | 'test' | 'resultados' | 'historial';

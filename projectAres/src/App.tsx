@@ -45,7 +45,7 @@ export default function App() {
             onNuevo={() => setVista('upload')}
           />
         )}
-        {vista === 'historial' && <HistorialView />}
+        {vista === 'historial' && <HistorialView onRehacer={iniciarTest} />}
       </main>
     </div>
   );

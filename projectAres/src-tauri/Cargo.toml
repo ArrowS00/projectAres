@@ -1,12 +1,12 @@
 [package]
-name = "testapp"
+name = "ProjectAres"
 version = "0.1.0"
 description = "App de test de oposiciones"
 authors = []
 edition = "2021"
 
 [lib]
-name = "testapp_lib"
+name = "project_ares_lib"
 crate-type = ["staticlib", "cdylib", "rlib"]
 
 [build-dependencies]

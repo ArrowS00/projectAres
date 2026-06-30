@@ -49,6 +49,7 @@ export default function UploadView({ onTestCargado }: Props) {
         setError('No se encontraron preguntas en el documento.');
         return;
       }
+      invoke('registrar_test_iniciado', { titulo: resultado.titulo, total: resultado.total, datosTest: JSON.stringify(resultado) }).catch(console.error);
       onTestCargado(resultado);
     } catch (e) {
       setError(String(e));
