@@ -13,7 +13,6 @@ export default function TestView({ data, onFinalizar }: Props) {
   const pregunta = data.preguntas[actual];
   const respondida = respuestas[actual];
   const tieneClave = pregunta.correcta != null;
-  const esCorrecta = tieneClave && respondida === pregunta.correcta;
   const total = data.preguntas.length;
 
   const responder = (letra: string) => {
