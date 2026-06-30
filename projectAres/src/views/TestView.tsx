@@ -51,8 +51,24 @@ export default function TestView({ data, onFinalizar }: Props) {
         <span className="test-score">✓ {correctas} ✗ {Object.keys(respuestas).length - correctas}</span>
       </div>
 
-      <div className="progress-bar">
-        <div className="progress-fill" style={{ width: `${((actual + 1) / total) * 100}%` }} />
+      <div className="progress-bar-segmentada">
+        {data.preguntas.map((p, i) => {
+          const resp = respuestas[i];
+          const correcta = p.correcta != null && resp === p.correcta;
+          const incorrecta = resp && p.correcta != null && resp !== p.correcta;
+          const sinClave = resp && p.correcta == null;
+          let color = 'var(--border)';
+          if (correcta) color = 'var(--correct)';
+          else if (incorrecta) color = 'var(--incorrect)';
+          else if (sinClave) color = 'var(--text-muted)';
+          return (
+            <div
+              key={i}
+              className={`progress-segmento ${i === actual ? 'activo' : ''}`}
+              style={{ background: color }}
+            />
+          );
+        })}
       </div>
 
       <div className="pregunta-card">
@@ -82,15 +98,6 @@ export default function TestView({ data, onFinalizar }: Props) {
         })}
       </div>
 
-      {respondida && (
-        <div className={`feedback ${!tieneClave ? 'feedback-neutral' : esCorrecta ? 'feedback-ok' : 'feedback-mal'}`}>
-          {!tieneClave
-            ? 'Sin clave de respuesta — este documento no incluye soluciones'
-            : esCorrecta
-              ? '✓ ¡Correcto!'
-              : `✗ Incorrecto — La respuesta correcta es la opción ${pregunta.correcta}`}
-        </div>
-      )}
 
       <div className="nav-botones">
         <button className="btn-sec" onClick={anterior} disabled={actual === 0}>← Anterior</button>

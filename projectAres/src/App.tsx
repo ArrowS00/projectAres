@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { ResultadoParser, Vista } from './types';
 import UploadView from './views/UploadView';
 import TestView from './views/TestView';
@@ -10,6 +10,14 @@ export default function App() {
   const [vista, setVista] = useState<Vista>('upload');
   const [testData, setTestData] = useState<ResultadoParser | null>(null);
   const [respuestas, setRespuestas] = useState<Record<number, string>>({});
+  const [tema, setTema] = useState<'dark' | 'light'>(() =>
+    (localStorage.getItem('tema') as 'dark' | 'light') ?? 'dark'
+  );
+
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', tema === 'light' ? 'light' : '');
+    localStorage.setItem('tema', tema);
+  }, [tema]);
 
   const iniciarTest = (data: ResultadoParser) => {
     setTestData(data);
@@ -29,6 +37,9 @@ export default function App() {
         <div className="navbar-links">
           <button onClick={() => setVista('upload')} className={vista === 'upload' ? 'active' : ''}>Nuevo test</button>
           <button onClick={() => setVista('historial')} className={vista === 'historial' ? 'active' : ''}>Historial</button>
+          <button className="btn-theme" onClick={() => setTema(t => t === 'dark' ? 'light' : 'dark')} title="Cambiar tema">
+            {tema === 'dark' ? '☀️' : '🌙'}
+          </button>
         </div>
       </nav>
 
