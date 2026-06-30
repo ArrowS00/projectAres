@@ -103,6 +103,7 @@ pub fn guardar_resultado(
     let resultado = storage::ResultadoTest {
         id: None, titulo, fecha, total, correctas, incorrectas, porcentaje,
         estado: "completado".to_string(),
+        datos_test: None,
     };
 
     storage::guardar_resultado(&conn, &resultado).map_err(|e| e.to_string())
