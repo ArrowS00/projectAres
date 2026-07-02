@@ -54,7 +54,7 @@ export default function HistorialView({ onRehacer }: Props) {
         <h2>Historial de tests</h2>
         <div style={{ display: 'flex', gap: '0.5rem' }}>
           <button className="btn-primary" onClick={crearTestMezclado} disabled={mezclando || historial.length < 2} title="Crea un test nuevo con 10 preguntas de cada test del historial">
-            {mezclando ? 'Creando...' : '🔀 Crear test mezclado'}
+            {mezclando ? 'Creando...' : '🔀 Mezclar preguntas'}
           </button>
           <button className="btn-sec" onClick={borrarHistorial}>Borrar historial</button>
         </div>
