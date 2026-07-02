@@ -70,6 +70,20 @@ pub fn actualizar_resultado(conn: &Connection, id: i64, r: &ResultadoTest) -> Re
     Ok(())
 }
 
+pub fn obtener_datos_para_mezcla(conn: &Connection) -> Result<Vec<String>> {
+    let mut stmt = conn.prepare(
+        "SELECT datos_test FROM resultados
+         WHERE datos_test IS NOT NULL
+         AND id IN (
+             SELECT MAX(id) FROM resultados WHERE datos_test IS NOT NULL GROUP BY titulo
+         )
+         ORDER BY id DESC"
+    )?;
+    let datos = stmt.query_map([], |row| row.get::<_, String>(0))?
+        .collect::<Result<Vec<_>>>()?;
+    Ok(datos)
+}
+
 pub fn cargar_historial(conn: &Connection) -> Result<Vec<ResultadoTest>> {
     let mut stmt = conn.prepare(
         "SELECT id, titulo, fecha, total, correctas, incorrectas, porcentaje, estado

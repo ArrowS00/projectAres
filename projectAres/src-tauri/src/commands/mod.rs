@@ -133,3 +133,142 @@ pub fn cargar_historial(app: AppHandle) -> Result<Value, String> {
     let historial = storage::cargar_historial(&conn).map_err(|e| e.to_string())?;
     serde_json::to_value(historial).map_err(|e| e.to_string())
 }
+
+#[tauri::command]
+pub fn crear_test_mezclado(app: AppHandle, por_test: u32) -> Result<Value, String> {
+    let data_dir = app.path().app_data_dir()
+        .map_err(|e| e.to_string())?
+        .to_string_lossy()
+        .to_string();
+
+    std::fs::create_dir_all(&data_dir).map_err(|e| e.to_string())?;
+    let conn = storage::conectar(&data_dir).map_err(|e| e.to_string())?;
+    let datos_json = storage::obtener_datos_para_mezcla(&conn).map_err(|e| e.to_string())?;
+
+    let resultado = construir_test_mezclado(datos_json, por_test)?;
+    serde_json::to_value(resultado).map_err(|e| e.to_string())
+}
+
+fn construir_test_mezclado(datos_json: Vec<String>, por_test: u32) -> Result<parser::ResultadoParser, String> {
+    if datos_json.len() < 2 {
+        return Err("Necesitas al menos 2 tests distintos en el historial para crear una mezcla.".to_string());
+    }
+
+    let mut preguntas_mezcladas: Vec<parser::Pregunta> = Vec::new();
+    let mut num_tests = 0;
+
+    for json in &datos_json {
+        let test: parser::ResultadoParser = match serde_json::from_str(json) {
+            Ok(t) => t,
+            Err(_) => continue,
+        };
+        let mut preguntas = test.preguntas;
+        barajar(&mut preguntas);
+        preguntas.truncate(por_test as usize);
+        if !preguntas.is_empty() {
+            num_tests += 1;
+            preguntas_mezcladas.extend(preguntas);
+        }
+    }
+
+    if preguntas_mezcladas.is_empty() {
+        return Err("Los tests del historial no tienen preguntas disponibles.".to_string());
+    }
+
+    barajar(&mut preguntas_mezcladas);
+    for (i, p) in preguntas_mezcladas.iter_mut().enumerate() {
+        p.num = (i + 1) as u32;
+    }
+
+    let con_clave = preguntas_mezcladas.iter().any(|p| p.correcta.is_some());
+    let total = preguntas_mezcladas.len();
+
+    Ok(parser::ResultadoParser {
+        titulo: format!("Test mezclado ({num_tests} tests)"),
+        preguntas: preguntas_mezcladas,
+        total,
+        con_clave,
+    })
+}
+
+/// Baraja un vector in-place usando claves de hash aleatorias (sin dependencias externas).
+fn barajar<T>(v: &mut Vec<T>) {
+    use std::collections::hash_map::RandomState;
+    use std::hash::{BuildHasher, Hasher};
+
+    let estado = RandomState::new();
+    let mut orden: Vec<(u64, usize)> = (0..v.len())
+        .map(|i| {
+            let mut hasher = estado.build_hasher();
+            hasher.write_usize(i);
+            (hasher.finish(), i)
+        })
+        .collect();
+    orden.sort_by_key(|&(h, _)| h);
+
+    let mut restante: Vec<Option<T>> = v.drain(..).map(Some).collect();
+    let mut nuevo = Vec::with_capacity(restante.len());
+    for (_, i) in orden {
+        nuevo.push(restante[i].take().unwrap());
+    }
+    *v = nuevo;
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn test_json(titulo: &str, n_preguntas: u32) -> String {
+        let preguntas: Vec<parser::Pregunta> = (1..=n_preguntas).map(|i| parser::Pregunta {
+            num: i,
+            enunciado: format!("Pregunta {i} de {titulo}"),
+            opciones: vec![
+                parser::Opcion { letra: "A".into(), texto: "uno".into() },
+                parser::Opcion { letra: "B".into(), texto: "dos".into() },
+            ],
+            correcta: Some("A".into()),
+        }).collect();
+        let r = parser::ResultadoParser {
+            titulo: titulo.to_string(),
+            total: preguntas.len(),
+            preguntas,
+            con_clave: true,
+        };
+        serde_json::to_string(&r).unwrap()
+    }
+
+    #[test]
+    fn mezcla_coge_hasta_por_test_de_cada_test() {
+        let datos = vec![test_json("Test A", 15), test_json("Test B", 20)];
+        let resultado = construir_test_mezclado(datos, 10).unwrap();
+        assert_eq!(resultado.total, 20);
+        assert_eq!(resultado.preguntas.len(), 20);
+        assert!(resultado.con_clave);
+        // renumeradas de forma secuencial 1..=20
+        let nums: Vec<u32> = resultado.preguntas.iter().map(|p| p.num).collect();
+        assert_eq!(nums, (1..=20).collect::<Vec<_>>());
+    }
+
+    #[test]
+    fn mezcla_respeta_tests_con_menos_preguntas_que_por_test() {
+        let datos = vec![test_json("Test A", 3), test_json("Test B", 10)];
+        let resultado = construir_test_mezclado(datos, 10).unwrap();
+        assert_eq!(resultado.total, 13);
+    }
+
+    #[test]
+    fn mezcla_falla_con_menos_de_dos_tests() {
+        let datos = vec![test_json("Test A", 10)];
+        let err = construir_test_mezclado(datos, 10).unwrap_err();
+        assert!(err.contains("al menos 2 tests"));
+    }
+
+    #[test]
+    fn barajar_mantiene_todos_los_elementos() {
+        let mut v: Vec<i32> = (0..50).collect();
+        barajar(&mut v);
+        let mut ordenado = v.clone();
+        ordenado.sort();
+        assert_eq!(ordenado, (0..50).collect::<Vec<_>>());
+    }
+}

@@ -18,9 +18,7 @@ export default function UploadView({ onTestCargado }: Props) {
   const [clicksGratuito, setClicksGratuito] = useState(0);
 
   useEffect(() => {
-    let unlisten: (() => void) | undefined;
-
-    getCurrentWebview().onDragDropEvent((event) => {
+    const unlistenPromise = getCurrentWebview().onDragDropEvent((event) => {
       if (event.payload.type === 'over') {
         setDragging(true);
       } else if (event.payload.type === 'leave') {
@@ -32,9 +30,9 @@ export default function UploadView({ onTestCargado }: Props) {
           procesarRuta(paths[0]);
         }
       }
-    }).then(fn => { unlisten = fn; });
+    });
 
-    return () => { unlisten?.(); };
+    return () => { unlistenPromise.then(fn => fn()); };
   }, []);
 
   const procesarRuta = async (ruta: string) => {

@@ -13,6 +13,7 @@ pub fn run() {
             commands::limpiar_historial,
             commands::cargar_historial,
             commands::cargar_test_desde_historial,
+            commands::crear_test_mezclado,
         ])
         .run(tauri::generate_context!())
         .expect("error running tauri app");

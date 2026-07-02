@@ -8,12 +8,26 @@ interface Props {
 
 export default function HistorialView({ onRehacer }: Props) {
   const [historial, setHistorial] = useState<ResultadoTest[]>([]);
+  const [mezclando, setMezclando] = useState(false);
 
   const cargar = () => {
     invoke<ResultadoTest[]>('cargar_historial').then(setHistorial).catch(console.error);
   };
 
   useEffect(() => { cargar(); }, []);
+
+  const crearTestMezclado = async () => {
+    setMezclando(true);
+    try {
+      const data = await invoke<ResultadoParser>('crear_test_mezclado', { porTest: 10 });
+      invoke('registrar_test_iniciado', { titulo: data.titulo, total: data.total, datosTest: JSON.stringify(data) }).catch(console.error);
+      onRehacer(data);
+    } catch (e) {
+      alert(String(e));
+    } finally {
+      setMezclando(false);
+    }
+  };
 
   const rehacer = async (id: number) => {
     try {
@@ -38,7 +52,12 @@ export default function HistorialView({ onRehacer }: Props) {
     <div className="historial-view">
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <h2>Historial de tests</h2>
-        <button className="btn-sec" onClick={borrarHistorial}>Borrar historial</button>
+        <div style={{ display: 'flex', gap: '0.5rem' }}>
+          <button className="btn-primary" onClick={crearTestMezclado} disabled={mezclando || historial.length < 2} title="Crea un test nuevo con 10 preguntas de cada test del historial">
+            {mezclando ? 'Creando...' : '🔀 Crear test mezclado'}
+          </button>
+          <button className="btn-sec" onClick={borrarHistorial}>Borrar historial</button>
+        </div>
       </div>
       <div className="historial-lista">
         {historial.map(r => (
